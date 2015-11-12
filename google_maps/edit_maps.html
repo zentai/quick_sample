@@ -1,0 +1,116 @@
+<html>
+  <head>
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIYwZ9SHCazeTuvmhhNcwXQn8qaxPSMN4"></script>
+    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+
+    <style type="text/css">
+      #map-canvas{
+        height: 200px;
+        width: 50%;
+      }
+
+      #search{
+        text-align: center;
+        width: 50%;
+      }
+    </style>
+
+    <script>
+      var map;
+      var marker ='';
+      $(function() {
+        function google_map() {
+          var lat = 3.142;
+          var lon = 101.696991666667;
+          var level = 14;
+          var dom_map = $("#map-canvas").get(0);
+          map = _create_map(dom_map, lat, lon, level);
+          marker = _create_marker(map, lat, lon);
+          google.maps.event.addDomListener(marker, 'dragend', _marker_dragend_callback);
+        }
+        google.maps.event.addDomListener(window, 'load', google_map);
+
+        function _create_map(dom_map, lat, lon, level){
+          var center_lan_lot = new google.maps.LatLng(lat, lon);
+          var mapOptions = { center: center_lan_lot, zoom: level};
+          return new google.maps.Map(dom_map, mapOptions);
+        }
+
+        function _create_marker(map, lat, lon){
+          var mk = new google.maps.Marker({
+            draggable: true,
+            position: new google.maps.LatLng(lat, lon)});
+          mk.setMap(map);
+          return mk;
+        }
+
+        function _marker_dragend_callback(){
+          var loc = marker.getPosition()
+          console.log("new marker: " + loc);
+          _save(loc);
+        }
+
+        function _save(location){
+          console.log("Save Position: " + location);
+          $.post('/course/save/5/1/0/',
+            {
+              'locale': location.F + ',' + location.A,
+              'level': map.getZoom(),
+              'timezone': 8,
+              'verified': false,
+              'csrfmiddlewaretoken': '{{csrf_token}}'
+            },
+             function(data){});
+
+          var address= $('#address').val();
+          $.post('/course/save/6/1/0/',
+            {
+              'address':address,
+              'csrfmiddlewaretoken': '{{csrf_token}}'
+            },
+            function(data){});
+        }
+
+        function search_by_address(){
+          var address = $("#address").val();
+          var geocoder = new google.maps.Geocoder();
+          geocoder.geocode({'address':address}, function(results, status){
+            if(status == google.maps.GeocoderStatus.OK){
+              var target_location = results[0].geometry.location;
+              _save(target_location);
+              map.setCenter(target_location);
+              marker.setPosition(target_location);
+            }else{
+              console.log('geocode failed: ' + status);
+            }
+          })
+        }
+
+        $("#search").click(function(){
+          search_by_address();
+        });
+      })
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas">
+    </div>
+    <div class="ui form">
+      <div class="field">
+        <label class="ui label white">
+          Search Address
+        </label>
+      </div>
+      <div class="field">
+          <input id="address" type="text" value="america">
+      </div>
+      <div id="search" class="field">
+         <button class="huge ui red button">
+            <i class="black icon marker"></i>
+            Find Location
+          </button>
+      </div>
+    </div>
+  </body>
+</html>
